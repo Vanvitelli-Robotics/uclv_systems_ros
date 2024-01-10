@@ -23,25 +23,37 @@ find_package (Eigen3 REQUIRED NO_MODULE)
 
 include_directories(include)
 
-############### Add filter_twist_stamped node as a component ###############
-add_library(filter_twist_stamped_component  SHARED src/${PROJECT_NAME}/filter_twist_stamped_component.cpp)
-ament_target_dependencies(filter_twist_stamped_component
+############### Add filter_geometry_msgs_component nodes as a components ###############
+add_library(filter_geometry_msgs_component  SHARED src/${PROJECT_NAME}/filter_geometry_msgs_component.cpp)
+ament_target_dependencies(filter_geometry_msgs_component
   "rclcpp"
   "rclcpp_components"
   "geometry_msgs"
   "uclv_eigen_ros_conversions"
   "uclv_systems_lib"
 )
-target_link_libraries(filter_twist_stamped_component Eigen3::Eigen)
-rclcpp_components_register_node(filter_twist_stamped_component 
+target_link_libraries(filter_geometry_msgs_component Eigen3::Eigen)
+rclcpp_components_register_node(filter_geometry_msgs_component 
+PLUGIN "uclv_systems_ros::FilterTwistNode"
+EXECUTABLE filter_twist
+)
+rclcpp_components_register_node(filter_geometry_msgs_component 
 PLUGIN "uclv_systems_ros::FilterTwistStampedNode"
 EXECUTABLE filter_twist_stamped
+)
+rclcpp_components_register_node(filter_geometry_msgs_component 
+PLUGIN "uclv_systems_ros::FilterWrenchNode"
+EXECUTABLE filter_wrench
+)
+rclcpp_components_register_node(filter_geometry_msgs_component 
+PLUGIN "uclv_systems_ros::FilterWrenchStampedNode"
+EXECUTABLE filter_wrench_stamped
 )
 
 # install
 install(
   TARGETS
-  filter_twist_stamped_component
+  filter_geometry_msgs_component
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)

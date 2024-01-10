@@ -8,7 +8,7 @@
 namespace uclv_systems_ros
 {
 
-template <typename MessageT, int FILTER_SIZE, bool MSG_HAS_EXTRA_FIELDS = true>
+template <typename MessageT, int FILTER_SIZE, bool MSG_HAS_EXTRA_FIELDS = false>
 class FilterMsgNode : public rclcpp::Node
 {
 public:
