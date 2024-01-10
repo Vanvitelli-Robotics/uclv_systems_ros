@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(uclv_filters_ros)
+project(uclv_systems_ros)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -34,7 +34,7 @@ ament_target_dependencies(filter_twist_stamped_component
 )
 target_link_libraries(filter_twist_stamped_component Eigen3::Eigen)
 rclcpp_components_register_node(filter_twist_stamped_component 
-PLUGIN "uclv_filters_ros::FilterTwistStampedNode"
+PLUGIN "uclv_systems_ros::FilterTwistStampedNode"
 EXECUTABLE filter_twist_stamped
 )
 

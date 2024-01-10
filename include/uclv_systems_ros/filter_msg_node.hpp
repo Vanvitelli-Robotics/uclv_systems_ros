@@ -5,7 +5,7 @@
 #include <Eigen/Dense>
 #include <uclv_systems_lib/tf/first_order_filter.hpp>
 
-namespace uclv_filters_ros
+namespace uclv_systems_ros
 {
 
 template <typename MessageT, int FILTER_SIZE, bool MSG_HAS_EXTRA_FIELDS = true>
@@ -96,4 +96,4 @@ protected:
   typename uclv::systems::tf::mimo::FirstOrderFilter<FILTER_SIZE>::UniquePtr filter_;
 };
 
-}  // namespace uclv_filters_ros
+}  // namespace uclv_systems_ros
