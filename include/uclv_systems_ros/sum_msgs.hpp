@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <std_msgs/msg/header.hpp>
+#include <rclcpp/time.hpp>
 
 namespace uclv_systems_ros
 {
@@ -21,16 +22,42 @@ inline void set_zero(MessageT& target_msg)
 }
 
 template <typename MessageT>
-inline void sum_msg(const MessageT& msg1, const MessageT& msg2, MessageT& result);
+inline void sum_msg(const MessageT& msg1, const MessageT& msg2, MessageT& result, bool positive_sign = true);
 
 template <typename MessageT>
-inline void sum_msgs(const std::vector<typename MessageT::ConstSharedPtr>& source_msg, MessageT& target_msg)
+inline void sum_msgs(const std::vector<typename MessageT::ConstSharedPtr>& source_msg, MessageT& target_msg,
+                     const std::vector<bool>& positive_signs = std::vector<bool>())
 {
-  for (size_t i = 0; i < source_msg.size(); i++)
+  size_t i = 0;
+
+  // Find the first non-null message
+  for (; i < source_msg.size(); i++)
   {
     if (source_msg[i])
     {
-      sum_msg(target_msg, *source_msg[i], target_msg);
+      bool sign_first_msg = (positive_signs.size() > i) ? positive_signs[i] : true;
+      if (sign_first_msg)
+      {
+        target_msg = *source_msg[i];
+      }
+      else
+      {
+        // A better potion could be the implementation of a negative_msg function:
+        // negative_msg(*source_msg[i], target_msg);
+        // but it should be implemented for each message type
+        set_zero(target_msg);
+        sum_msg(target_msg, *source_msg[i], target_msg, false);
+      }
+      break;
+    }
+  }
+
+  // Sum the rest of the messages
+  for (; i < source_msg.size(); i++)
+  {
+    if (source_msg[i])
+    {
+      sum_msg(target_msg, *source_msg[i], target_msg, (positive_signs.size() > i) ? positive_signs[i] : true);
     }
   }
 }

@@ -13,6 +13,7 @@ public:
   SumMsgNode(const rclcpp::NodeOptions& options) : Node("sum_msg_node", options)
   {
     topics_in_ = this->declare_parameter<std::vector<std::string>>("topics_in", std::vector<std::string>());
+    signs_ = this->declare_parameter<std::vector<bool>>("signs", std::vector<bool>());
     pub_msg_ = this->create_publisher<MessageT>("msg_out", rclcpp::SensorDataQoS());
   }
 
@@ -40,8 +41,7 @@ public:
   {
     typename MessageT::UniquePtr msg_out = std::make_unique<MessageT>();
 
-    set_zero(*msg_out);
-    sum_msgs(last_msgs_, *msg_out);
+    sum_msgs(last_msgs_, *msg_out, signs_);
 
     pub_msg_->publish(std::move(msg_out));
   }
@@ -50,6 +50,7 @@ protected:
   std::vector<std::string> topics_in_;
   std::vector<typename MessageT::ConstSharedPtr> last_msgs_;
   std::vector<std::shared_ptr<rclcpp::Subscription<MessageT>>> sub_msgs_;
+  std::vector<bool> signs_;
 
   std::shared_ptr<rclcpp::Publisher<MessageT>> pub_msg_;
 };
