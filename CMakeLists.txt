@@ -50,10 +50,28 @@ PLUGIN "uclv_systems_ros::FilterWrenchStampedNode"
 EXECUTABLE filter_wrench_stamped
 )
 
+############### Add sum_geometry_msgs_component nodes as a components ###############
+add_library(sum_geometry_msgs_component  SHARED src/${PROJECT_NAME}/sum_geometry_msgs_component.cpp)
+ament_target_dependencies(sum_geometry_msgs_component
+  "rclcpp"
+  "rclcpp_components"
+  "geometry_msgs"
+)
+# target_link_libraries(sum_geometry_msgs_component Eigen3::Eigen)
+rclcpp_components_register_node(sum_geometry_msgs_component 
+PLUGIN "uclv_systems_ros::SumTwistNode"
+EXECUTABLE sum_twist
+)
+rclcpp_components_register_node(sum_geometry_msgs_component 
+PLUGIN "uclv_systems_ros::SumTwistStampedNode"
+EXECUTABLE sum_twist_stamped
+)
+
 # install
 install(
   TARGETS
   filter_geometry_msgs_component
+  sum_geometry_msgs_component
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
