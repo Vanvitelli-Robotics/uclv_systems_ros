@@ -19,6 +19,11 @@ public:
     cut_freq_ = this->declare_parameter<double>("cut_frequency", -1.0);
     gain_ = this->declare_parameter<double>("gain", 1.0);
 
+    // if true the filter will not use a timer. The filter will be run only when a new message is received
+    // thus, the input topic rate must be equal to 1/sample_time
+    // this is useful to avoid delays due to timer synchronization
+    use_msg_timing_ = this->declare_parameter<bool>("use_msg_timing", false);
+
     if (sample_time_ <= 0)
     {
       RCLCPP_ERROR(this->get_logger(), "FilterMsgNode Invalid sample time %f", sample_time_);
@@ -32,13 +37,22 @@ public:
 
     init_filter();
 
-    sub_msg_ = this->create_subscription<MessageT>("msg_in", rclcpp::SensorDataQoS(),
-                                                   std::bind(&FilterMsgNode::msgCallback, this, std::placeholders::_1));
-
     pub_msg_ = this->create_publisher<MessageT>("msg_out", rclcpp::SensorDataQoS());
 
-    timer_ = rclcpp::create_timer(this, this->get_clock(), std::chrono::duration<double>(sample_time_),
-                                  std::bind(&FilterMsgNode::timerCallback, this));
+    if (use_msg_timing_)
+    {
+      sub_msg_ = this->create_subscription<MessageT>(
+          "msg_in", rclcpp::SensorDataQoS(),
+          std::bind(&FilterMsgNode::msgCallbackWithRun, this, std::placeholders::_1));
+    }
+    else
+    {
+      sub_msg_ = this->create_subscription<MessageT>(
+          "msg_in", rclcpp::SensorDataQoS(), std::bind(&FilterMsgNode::msgCallback, this, std::placeholders::_1));
+
+      timer_ = rclcpp::create_timer(this, this->get_clock(), std::chrono::duration<double>(sample_time_),
+                                    std::bind(&FilterMsgNode::timerCallback, this));
+    }
   }
 
   void init_filter()
@@ -57,6 +71,12 @@ public:
   void msgCallback(const typename MessageT::ConstSharedPtr source_msg)
   {
     last_msg_ = source_msg;
+  }
+
+  void msgCallbackWithRun(const typename MessageT::ConstSharedPtr source_msg)
+  {
+    last_msg_ = source_msg;
+    timerCallback();
   }
 
   void timerCallback()
@@ -79,7 +99,14 @@ public:
     uclv::ros::conversions::convert(output, *msg_out);
     if (MSG_HAS_EXTRA_FIELDS)
     {
-      uclv::ros::conversions::copy_extra_fields(*msg_in, *msg_out, this->now());
+      if (use_msg_timing_)
+      {
+        uclv::ros::conversions::copy_extra_fields(*msg_in, *msg_out);
+      }
+      else
+      {
+        uclv::ros::conversions::copy_extra_fields(*msg_in, *msg_out, this->now());
+      }
     }
 
     pub_msg_->publish(std::move(msg_out));
@@ -90,6 +117,7 @@ protected:
   std::shared_ptr<rclcpp::Subscription<MessageT>> sub_msg_;
   std::shared_ptr<rclcpp::Publisher<MessageT>> pub_msg_;
 
+  bool use_msg_timing_ = false;
   double sample_time_, cut_freq_, gain_;
   typename MessageT::ConstSharedPtr last_msg_;
 

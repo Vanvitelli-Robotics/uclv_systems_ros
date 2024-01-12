@@ -44,7 +44,7 @@ inline void sum_msgs(const std::vector<typename MessageT::ConstSharedPtr>& sourc
       }
       else
       {
-        // TODO A better potion could be the implementation of a negative_msg function:
+        // TODO A better option could be the implementation of a negative_msg function:
         // negative_msg(*source_msg[i], target_msg);
         // but it should be implemented for each message type
         set_zero(target_msg);
