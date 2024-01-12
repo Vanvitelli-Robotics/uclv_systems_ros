@@ -79,7 +79,7 @@ public:
     uclv::ros::conversions::convert(output, *msg_out);
     if (MSG_HAS_EXTRA_FIELDS)
     {
-      uclv::ros::conversions::copy_extra_fields(*msg_in, *msg_out);
+      uclv::ros::conversions::copy_extra_fields(*msg_in, *msg_out, this->now());
     }
 
     pub_msg_->publish(std::move(msg_out));

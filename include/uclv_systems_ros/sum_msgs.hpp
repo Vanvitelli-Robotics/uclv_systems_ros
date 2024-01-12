@@ -4,6 +4,7 @@
 #include <memory>
 #include <std_msgs/msg/header.hpp>
 #include <rclcpp/time.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 namespace uclv_systems_ros
 {
@@ -18,6 +19,7 @@ inline void propagate_header_in_sum(const std_msgs::msg::Header& msg1_header, co
 template <typename MessageT>
 inline void set_zero(MessageT& target_msg)
 {
+  (void)target_msg;
   // As default we will assume that the message has been already initialized to zero
 }
 
@@ -42,12 +44,13 @@ inline void sum_msgs(const std::vector<typename MessageT::ConstSharedPtr>& sourc
       }
       else
       {
-        // A better potion could be the implementation of a negative_msg function:
+        // TODO A better potion could be the implementation of a negative_msg function:
         // negative_msg(*source_msg[i], target_msg);
         // but it should be implemented for each message type
         set_zero(target_msg);
         sum_msg(target_msg, *source_msg[i], target_msg, false);
       }
+      i++;
       break;
     }
   }
