@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.20)
 project(uclv_systems_ros)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -11,28 +11,51 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
-
 find_package(rclcpp_components REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(uclv_eigen_ros_conversions REQUIRED)
+find_package(uclv_systems_interfaces REQUIRED)
 find_package(uclv_systems_lib REQUIRED)
-find_package (Eigen3 REQUIRED NO_MODULE)
+find_package(Eigen3 REQUIRED NO_MODULE)
+find_package(yaml-cpp REQUIRED)
 
-include_directories(include)
+add_library(${PROJECT_NAME} INTERFACE)
+target_include_directories(${PROJECT_NAME}
+  INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${uclv_eigen_ros_conversions_INCLUDE_DIRS}
+    ${uclv_systems_lib_INCLUDE_DIRS}
+)
+target_link_libraries(${PROJECT_NAME}
+  INTERFACE
+    rclcpp::rclcpp
+    rclcpp_components::component
+    std_srvs::std_srvs
+    geometry_msgs::geometry_msgs
+    Eigen3::Eigen
+    yaml-cpp::yaml-cpp
+    uclv_systems_interfaces::uclv_systems_interfaces
+)
 
 ############### Add filter_geometry_msgs_component nodes as a components ###############
 add_library(filter_geometry_msgs_component  SHARED src/${PROJECT_NAME}/filter_geometry_msgs_component.cpp)
-ament_target_dependencies(filter_geometry_msgs_component
-  "rclcpp"
-  "rclcpp_components"
-  "geometry_msgs"
-  "uclv_eigen_ros_conversions"
-  "uclv_systems_lib"
+target_include_directories(filter_geometry_msgs_component
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${uclv_eigen_ros_conversions_INCLUDE_DIRS}
+    ${uclv_systems_lib_INCLUDE_DIRS}
 )
-target_link_libraries(filter_geometry_msgs_component Eigen3::Eigen)
+target_link_libraries(filter_geometry_msgs_component
+  PRIVATE
+    rclcpp::rclcpp
+    rclcpp_components::component
+    geometry_msgs::geometry_msgs
+    Eigen3::Eigen
+)
 rclcpp_components_register_node(filter_geometry_msgs_component 
 PLUGIN "uclv_systems_ros::FilterTwistNode"
 EXECUTABLE filter_twist
@@ -52,12 +75,17 @@ EXECUTABLE filter_wrench_stamped
 
 ############### Add sum_geometry_msgs_component nodes as a components ###############
 add_library(sum_geometry_msgs_component  SHARED src/${PROJECT_NAME}/sum_geometry_msgs_component.cpp)
-ament_target_dependencies(sum_geometry_msgs_component
-  "rclcpp"
-  "rclcpp_components"
-  "geometry_msgs"
+target_include_directories(sum_geometry_msgs_component
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
 )
-# target_link_libraries(sum_geometry_msgs_component Eigen3::Eigen)
+target_link_libraries(sum_geometry_msgs_component
+  PRIVATE
+    rclcpp::rclcpp
+    rclcpp_components::component
+    geometry_msgs::geometry_msgs
+)
 rclcpp_components_register_node(sum_geometry_msgs_component 
 PLUGIN "uclv_systems_ros::SumTwistNode"
 EXECUTABLE sum_twist
@@ -68,13 +96,33 @@ EXECUTABLE sum_twist_stamped
 )
 
 # install
+ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
+ament_export_include_directories(include)
+ament_export_dependencies(
+  rclcpp
+  rclcpp_components
+  std_srvs
+  geometry_msgs
+  uclv_eigen_ros_conversions
+  uclv_systems_interfaces
+  uclv_systems_lib
+  Eigen3
+  yaml-cpp
+)
+
 install(
   TARGETS
+  ${PROJECT_NAME}
   filter_geometry_msgs_component
   sum_geometry_msgs_component
+  EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
+
+install(
+  DIRECTORY include/
+  DESTINATION include)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

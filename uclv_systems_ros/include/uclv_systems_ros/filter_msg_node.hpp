@@ -22,6 +22,7 @@ public:
     // if true the filter will not use a timer. The filter will be run only when a new message is received
     // thus, the input topic rate must be equal to 1/sample_time
     // this is useful to avoid delays due to timer synchronization
+    // TODO: rename to "run_on_msg" or "run_on_input_msg"
     use_msg_timing_ = this->declare_parameter<bool>("use_msg_timing", false);
 
     if (sample_time_ <= 0)

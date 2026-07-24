@@ -1,0 +1,20 @@
+# Time for which incoming measurement messages are collected.
+builtin_interfaces/Duration recording_duration
+
+# YAML file to update. Leave empty to return the covariance without saving it.
+string output_path
+
+# If false, an existing output file causes the request to fail.
+bool overwrite false
+
+# If true, set all off-diagonal covariance coefficients to zero.
+bool diagonal_only false
+---
+bool success
+string message
+
+# The covariance is a square dimension x dimension matrix.
+uint32 dimension
+
+# Matrix coefficients in row-major order.
+float64[] covariance
