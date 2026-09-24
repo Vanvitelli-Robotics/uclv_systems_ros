@@ -95,6 +95,25 @@ PLUGIN "uclv_systems_ros::SumTwistStampedNode"
 EXECUTABLE sum_twist_stamped
 )
 
+############### Add twist_stamped_sine_publisher as a component ###############
+add_library(twist_stamped_sine_publisher_component SHARED src/${PROJECT_NAME}/twist_stamped_sine_publisher.cpp)
+target_include_directories(twist_stamped_sine_publisher_component
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(twist_stamped_sine_publisher_component
+  PRIVATE
+    rclcpp::rclcpp
+    rclcpp_components::component
+    geometry_msgs::geometry_msgs
+    yaml-cpp::yaml-cpp
+)
+rclcpp_components_register_node(twist_stamped_sine_publisher_component
+  PLUGIN "uclv_systems_ros::TwistStampedSinePublisher"
+  EXECUTABLE twist_stamped_sine_publisher
+)
+
 # install
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_include_directories(include)
@@ -115,6 +134,7 @@ install(
   ${PROJECT_NAME}
   filter_geometry_msgs_component
   sum_geometry_msgs_component
+  twist_stamped_sine_publisher_component
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -124,7 +144,12 @@ install(
   DIRECTORY include/
   DESTINATION include)
 
+install(
+  DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config)
+
 if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
   # comment the line when a copyright and license is added to all source files
@@ -134,6 +159,13 @@ if(BUILD_TESTING)
   # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  ament_add_gtest(
+    test_measurement_covariance_filter
+    test/test_measurement_covariance_filter.cpp)
+  target_link_libraries(
+    test_measurement_covariance_filter
+    ${PROJECT_NAME})
 endif()
 
 ament_package()

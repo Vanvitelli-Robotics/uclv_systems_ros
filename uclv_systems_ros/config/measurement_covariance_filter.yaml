@@ -1,0 +1,14 @@
+measurement_covariance_filter:
+  # If false, covariance is computed directly from the recorded measurements.
+  enabled: false
+
+  # moving_average/ma or savitzky_golay/sg. If omitted, the presence of
+  # polyorder selects Savitzky-Golay; otherwise moving average is selected.
+  type: savitzky_golay
+
+  # A positive odd scalar defines a centred window. Alternatively use
+  # [before, after], where before includes the current sample.
+  window_size: 11
+
+  # Used only by savitzky_golay. It must be smaller than the total window size.
+  polyorder: 3

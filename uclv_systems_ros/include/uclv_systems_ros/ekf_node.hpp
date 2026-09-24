@@ -20,6 +20,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <uclv_eigen_ros_conversions/eigen_ros_conversions.hpp>
+#include <uclv_systems_ros/measurement_covariance_filter.hpp>
 #include <uclv_systems_interfaces/srv/estimate_measurement_covariance.hpp>
 #include <uclv_systems_lib/observers/ekf.hpp>
 
@@ -52,6 +53,32 @@ namespace uclv_systems_ros
             run_on_measurement_ = this->declare_parameter<bool>("run_on_measurement", false);
             use_msg_timestamp_ = this->declare_parameter<bool>("use_msg_timestamp", true);
             running_.store(this->declare_parameter<bool>("start_running", false));
+            const std::string measurement_covariance_filter_conf =
+                this->declare_parameter<std::string>(
+                "measurement_covariance_filter_conf", "");
+
+            if (!measurement_covariance_filter_conf.empty())
+            {
+                const auto filter_config = loadMeasurementCovarianceFilterConfig(
+                    measurement_covariance_filter_conf);
+                measurement_covariance_filter_ =
+                    makeMeasurementSignalFilter<Scalar_t, dim_measurement>(filter_config);
+                if (measurement_covariance_filter_)
+                {
+                    RCLCPP_INFO(
+                        this->get_logger(),
+                        "Measurement covariance estimation will use the %s filter from %s",
+                        measurement_covariance_filter_->name().c_str(),
+                        measurement_covariance_filter_conf.c_str());
+                }
+                else
+                {
+                    RCLCPP_INFO(
+                        this->get_logger(),
+                        "Measurement covariance filtering is disabled by %s",
+                        measurement_covariance_filter_conf.c_str());
+                }
+            }
 
             std::string input_topic = "input_topic";                               // use remapping to change this topic name
             std::string measurement_topic = "measurement_topic";                   // use remapping to change this topic name
@@ -424,7 +451,9 @@ namespace uclv_systems_ros
 
             try
             {
-                covariance_estimation_timer_ = this->create_wall_timer(
+                covariance_estimation_timer_ = rclcpp::create_timer(
+                    this,
+                    this->get_clock(),
                     recording_duration.to_chrono<std::chrono::nanoseconds>(),
                     [this, service, request_header,
                      output_path = request->output_path,
@@ -481,31 +510,51 @@ namespace uclv_systems_ros
             auto response = std::make_shared<typename EstimateMeasurementCovarianceSrv_t::Response>();
             response->dimension = static_cast<std::uint32_t>(dim_measurement);
 
-            if (samples.size() < 2)
+            std::vector<Output_t> residuals;
+            const std::vector<Output_t> * covariance_input = &samples;
+            if (measurement_covariance_filter_)
+            {
+                residuals = estimateNoiseResiduals(samples, *measurement_covariance_filter_);
+                covariance_input = &residuals;
+            }
+
+            if (covariance_input->size() < 2)
             {
                 response->success = false;
-                response->message =
-                    "At least two measurement samples are required; received " +
-                    std::to_string(samples.size());
+                if (measurement_covariance_filter_)
+                {
+                    response->message =
+                        "At least two valid residual samples are required after " +
+                        measurement_covariance_filter_->name() +
+                        " filtering; recorded " + std::to_string(samples.size()) +
+                        " measurements and obtained " +
+                        std::to_string(covariance_input->size()) + " residuals";
+                }
+                else
+                {
+                    response->message =
+                        "At least two measurement samples are required; received " +
+                        std::to_string(samples.size());
+                }
                 finishCovarianceEstimationOperation();
                 sendCovarianceEstimationResponse(service, request_header, response);
                 return;
             }
 
             Output_t mean = Output_t::Zero();
-            for (const auto &sample : samples)
+            for (const auto &sample : *covariance_input)
             {
                 mean += sample;
             }
-            mean /= static_cast<Scalar_t>(samples.size());
+            mean /= static_cast<Scalar_t>(covariance_input->size());
 
             OutputNoiseCovariance_t covariance = OutputNoiseCovariance_t::Zero();
-            for (const auto &sample : samples)
+            for (const auto &sample : *covariance_input)
             {
                 const Output_t centered = sample - mean;
                 covariance.noalias() += centered * centered.transpose();
             }
-            covariance /= static_cast<Scalar_t>(samples.size() - 1u);
+            covariance /= static_cast<Scalar_t>(covariance_input->size() - 1u);
             covariance = (covariance + covariance.transpose()).eval() * Scalar_t(0.5);
             if (diagonal_only)
             {
@@ -537,7 +586,15 @@ namespace uclv_systems_ros
                     std::string("Estimated ") +
                     (diagonal_only ? "diagonal " : "full ") +
                     "measurement covariance from " +
-                    std::to_string(samples.size()) + " samples";
+                    std::to_string(covariance_input->size()) +
+                    (measurement_covariance_filter_ ? " residual samples" : " samples");
+                if (measurement_covariance_filter_)
+                {
+                    response->message +=
+                        " produced by " + measurement_covariance_filter_->name() +
+                        " filtering of " + std::to_string(samples.size()) +
+                        " recorded measurements";
+                }
                 if (!output_path.empty())
                 {
                     response->message += " and saved it to " + output_path;
@@ -900,6 +957,8 @@ namespace uclv_systems_ros
         typename rclcpp::Service<EstimateMeasurementCovarianceSrv_t>::SharedPtr
             srv_estimate_measurement_covariance_;
         rclcpp::TimerBase::SharedPtr covariance_estimation_timer_;
+        std::unique_ptr<MeasurementSignalFilter<Scalar_t, dim_measurement>>
+            measurement_covariance_filter_;
 
         std::atomic_bool running_{false};
         std::atomic_bool covariances_configured_{false};

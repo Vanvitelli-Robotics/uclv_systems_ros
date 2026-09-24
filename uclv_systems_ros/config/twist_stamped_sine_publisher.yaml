@@ -1,0 +1,14 @@
+twist_stamped_sine_publisher:
+  topic: twist_sine
+  use_sim_time: false
+  publish_rate: 100.0
+
+  linear:
+    x: {amplitude: 1.0, frequency: 0.5, phase: 0.0, offset: 0.0}
+    y: {amplitude: 0.0, frequency: 0.5, phase: 0.0, offset: 0.0}
+    z: {amplitude: 0.0, frequency: 0.5, phase: 0.0, offset: 0.0}
+
+  angular:
+    x: {amplitude: 0.0, frequency: 0.5, phase: 0.0, offset: 0.0}
+    y: {amplitude: 0.0, frequency: 0.5, phase: 0.0, offset: 0.0}
+    z: {amplitude: 0.5, frequency: 0.25, phase: 0.0, offset: 0.0}
